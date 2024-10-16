@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperatura</title>
+    <!-- Incluindo Chart.js corretamente via CDN sem import -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+        .buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gráfico de Temperatura</h1>
+    <canvas id="grafico" width="400" height="200"></canvas>
+    <br>
+    <div class="buttons">
+        <button id="anterior">Anterior</button>
+        <button id="proximo">Próximo</button>
+    </div>
+</div>
+
+<!-- Código JavaScript movido para depois do Chart.js -->
+<script>
+    let paginaAtual = 1;
+    const itensPorPagina = 10; // Número de dados por página
+    let grafico;
+
+    // URL da API (defina sua URL corretamente)
+    const apiUrl = 'http://localhost:3000/dados'; // Certifique-se de que a API esteja rodando
+
+    // Função para buscar dados da API com paginação
+    async function buscarDados(pagina) {
+        try {
+            const response = await fetch(`${apiUrl}?page=${pagina}&limit=${itensPorPagina}`);
+            if (!response.ok) {
+                throw new Error('Erro ao buscar dados');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Erro ao buscar dados da API:', error);
+        }
+    }
+
+    // Função para renderizar o gráfico
+    function renderizarGrafico(dados) {
+        const labels = dados.map(item => new Date(item.timestamp).toLocaleString());
+        const temperaturas = dados.map(item => item.temperature);
+
+        const ctx = document.getElementById('grafico').getContext('2d');
+        if (grafico) {
+            grafico.destroy(); // Destrói o gráfico anterior ao renderizar um novo
+        }
+        grafico = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Temperatura (°C)',
+                    data: temperaturas,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Tempo'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Temperatura (°C)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Função para carregar a página de dados
+    async function carregarPagina(pagina) {
+        const dados = await buscarDados(pagina);
+        if (dados && dados.length > 0) {
+            renderizarGrafico(dados);
+        }
+    }
+
+    // Inicializa a primeira página
+    carregarPagina(paginaAtual);
+
+    // Evento de clique para o botão "Anterior"
+    document.getElementById('anterior').addEventListener('click', () => {
+        if (paginaAtual > 1) {
+            paginaAtual--;
+            carregarPagina(paginaAtual);
+        }
+    });
+
+    // Evento de clique para o botão "Próximo"
+    document.getElementById('proximo').addEventListener('click', () => {
+        paginaAtual++;
+        carregarPagina(paginaAtual);
+    });
+</script>
+
+</body>
+</html>
